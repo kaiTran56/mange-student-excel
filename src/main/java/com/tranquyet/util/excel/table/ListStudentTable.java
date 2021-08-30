@@ -3,9 +3,11 @@ package com.tranquyet.util.excel.table;
 import com.tranquyet.constant.excel.TableExcelValueConstant;
 import com.tranquyet.model.ExcelModel;
 import com.tranquyet.model.Student;
-import com.tranquyet.util.excel.ComponentExcel;
+import com.tranquyet.service.StudentStorageService;
+import com.tranquyet.util.excel.table.chart.ChartTableExcel;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
 
 import java.util.List;
 
@@ -18,34 +20,50 @@ public class ListStudentTable {
      *              createFieldTable: generate the field for table
      *              createNameTableAndPage: generate the name of table, page number
      *              createCellAndBind: generate the cell of table and bind the value into them
+     *              createBreakPage: set break page for student sheet
      * </pre>
      *
      * @param studentSheet   create List Student Sheet
      * @param componentExcel getting instance to embed the style for cell and border
      * @param wb             representation of an Excel workbook
-     * @param excelModel     embedding the name of table and current page and total page
-     * @param pageNumber     current page, if any time it increase, a new page create
-     * @param list           contain the student information, have no more than 20 student per/list
      */
     public static void createPage(Sheet studentSheet, ComponentExcel componentExcel, Workbook wb
-            , ExcelModel excelModel, int pageNumber, List<Student> list) {
+    ) {
 
 
-        studentSheet.setDefaultRowHeightInPoints(23);
+        studentSheet.setDefaultRowHeightInPoints(19);
+        ExcelModel excelModel = new ExcelModel();
+        excelModel.setNameTable("Demo");
+        int totalPage = StudentStorageService.pagination(TableExcelValueConstant.NUMBER_ROW_PER_PAGE).size();
+        excelModel.setTotalPage(totalPage);
+        List<List<Student>> listStudent = StudentStorageService.pagination(TableExcelValueConstant.NUMBER_ROW_PER_PAGE);
 
-        /**
-         * Dynamic value which depend on pageNumber, any time page number increase will create a new page
-         * and the location of cell, name of table will increase pageNumber time
-         */
-        int startRow = pageNumber * TableExcelValueConstant.ALL_ROW_PER_PAGE; // dynamic start row for cell which hold the value
+        for (int i = 0; i < totalPage; i++) {
+            excelModel.setCurrentPage(i + 1);
+            /**
+             * Dynamic value which depend on pageNumber, any time page number increase will create a new page
+             * and the location of cell, name of table will increase pageNumber time
+             */
+            int startRow = i * TableExcelValueConstant.ALL_ROW_PER_PAGE;
+            if (i == totalPage - 1) {
+                createFieldTable(studentSheet, wb, startRow, componentExcel); // generate the field for table
+                createNameTableAndPage(studentSheet, wb, startRow, componentExcel, excelModel); //generate the name of table, page number
+                createCellAndBindLastPage(studentSheet, componentExcel, wb, startRow, listStudent.get(i), excelModel);
 
-        createFieldTable(studentSheet, wb, startRow, componentExcel); // generate the field for table
+                studentSheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
+                studentSheet.getPrintSetup().setLandscape(false);
+                studentSheet.setFitToPage(true);
+                PrintSetup printSetup = studentSheet.getPrintSetup();
+                printSetup.setFitHeight((short) 0);
+                printSetup.setFitWidth((short) 1);
 
-        createNameTableAndPage(studentSheet, wb, startRow, componentExcel, excelModel); //generate the name of table, page number
+            } else {
+                createFieldTable(studentSheet, wb, startRow, componentExcel); // generate the field for table
+                createNameTableAndPage(studentSheet, wb, startRow, componentExcel, excelModel); //generate the name of table, page number
+                createCellAndBind(studentSheet, componentExcel, wb, startRow, listStudent.get(i)); // generate the cell of table and bind the value into them
 
-        createCellAndBind(studentSheet, componentExcel, wb, startRow, list); // generate the cell of table and bind the value into them
-
-        createBreakPage(studentSheet);
+            }
+        }
 
     }
 
@@ -141,7 +159,14 @@ public class ListStudentTable {
  */
         Cell pageCell = null;
         pageCell = headerRow.createCell(6);
-        pageCell.setCellValue(TableExcelValueConstant.PAGE_TABLE + excelModel.getCurrentPage() + "/" + excelModel.getTotalPage());
+        if (startRow == studentSheet.getLastRowNum()) {
+            pageCell.setCellValue(TableExcelValueConstant.PAGE_TABLE + (excelModel.getCurrentPage() + 1) + "/" + (excelModel.getTotalPage() + 1));
+        }else if(StudentStorageService.getTotal()==34){
+            pageCell.setCellValue(TableExcelValueConstant.PAGE_TABLE + (excelModel.getCurrentPage()) + "/" + (excelModel.getTotalPage() + 1));
+        }
+        else {
+            pageCell.setCellValue(TableExcelValueConstant.PAGE_TABLE + excelModel.getCurrentPage() + "/" + (excelModel.getTotalPage()));
+        }
         studentSheet.addMergedRegion(new CellRangeAddress(
                 0 + startRow, //row
                 0 + startRow, //row
@@ -172,9 +197,7 @@ public class ListStudentTable {
         /**
          * (numberRow + 2) create the row to draw main bottom border
          */
-        //CreationHelper createHelper = wb.getCreationHelper();
-        //String formula = "=INT((TODAY()-E4)/365)";
-        for (int i = 0; i < numberRow + 2; i++) {
+        for (int i = 0; i < numberRow; i++) {
             row = studentSheet.createRow(3 + i + startRow); // row start cell need +5 because 5 row before had used by field table and main top border
             /**
              * bind the value to cell
@@ -191,30 +214,62 @@ public class ListStudentTable {
                     }
                 }
             }
-        }
 
+            if (i == 33) {
+                studentSheet.setRowBreak(studentSheet.getLastRowNum());
+            }
+        }
     }
 
     /**
-     * @param studentSheet
+     * generate the cell of table and bind the value into them and draw the main bottom border for table
+     *
+     * @param studentSheet   create List Student Sheet
+     * @param componentExcel embedding the name of table and current page and total page
+     * @param wb             representation of an Excel workbook
+     * @param startRow       Dynamic value which depend on pageNumber, any time page number increase will create a new page
+     *                       and the location of cell, name of table will increase pageNumber time
+     * @param list           contain the student information, have no more than 20 student per/list
      */
-    public static void createBreakPage(Sheet studentSheet) {
-        int count = 0;
-        int check = 3;
-        studentSheet.setRowBreak(22);
-        for (int i = 0; i < studentSheet.getLastRowNum(); i++) {
-            if (count % 20 == 0 && count != 0) {
-                studentSheet.setRowBreak(22 + count + check);
-                check += 3;
+    public static void createCellAndBindLastPage(Sheet studentSheet, ComponentExcel componentExcel, Workbook wb, int startRow, List<Student> list, ExcelModel excelModel) {
+        /**
+         *  create cell and bind the value
+         */
+        Cell cell = null;
+        Row row = null;
+        int numberRow = list.size();
+        /**
+         * (numberRow + 2) create the row to draw main bottom border
+         */
+        for (int i = 0; i < numberRow + 20; i++) {
+            row = studentSheet.createRow(3 + i + startRow); // row start cell need +5 because 5 row before had used by field table and main top border
+            /**
+             * bind the value to cell
+             */
+            if (i < numberRow) {
+                for (int j = 0; j < TableExcelValueConstant.NUMBER_FIELD_EXCEL; j++) {
+                    cell = row.createCell(j + 1);
+                    if (j == 1) {
+                        cell.setCellValue(list.get(i).getArrayInformation()[j]);// set value from student
+                        componentExcel.createStyleNameColumn(cell, wb); // set style for cell
+                    } else {
+                        cell.setCellValue(list.get(i).getArrayInformation()[j]);// set value from student
+                        componentExcel.createStyleCellTable(cell, wb); // set style for cell
+                    }
+                }
             }
-            count++;
+            if (i == numberRow) {
+                if (list.size() > 20) {
+                    studentSheet.setRowBreak(studentSheet.getLastRowNum() - 1);
+                    createNameTableAndPage(studentSheet, wb, studentSheet.getLastRowNum(), componentExcel, excelModel);
+                    ChartTableExcel.createChartTable((XSSFSheet) studentSheet, 5 + i + startRow);
+                } else {
+                    ChartTableExcel.createChartTable((XSSFSheet) studentSheet, 5 + i + startRow);
+                }
+
+            }
+
         }
-        studentSheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
-        studentSheet.getPrintSetup().setLandscape(true);
-        studentSheet.setFitToPage(true);
-        PrintSetup printSetup = studentSheet.getPrintSetup();
-        printSetup.setFitHeight((short) 0);
-        printSetup.setFitWidth((short) 1);
     }
 
 }

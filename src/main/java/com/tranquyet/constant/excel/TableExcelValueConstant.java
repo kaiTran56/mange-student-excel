@@ -42,7 +42,7 @@ public class TableExcelValueConstant {
     /**
      * constant number row of table to set value
      */
-    public static final int NUMBER_ROW_PER_PAGE = 20;
+    public static final int NUMBER_ROW_PER_PAGE = 34;
 
     /**
      * name of table
@@ -57,7 +57,7 @@ public class TableExcelValueConstant {
     /**
      * constant all row of a full page, have enough 20 student / page
      */
-    public static final int ALL_ROW_PER_PAGE = 23;
+    public static final int ALL_ROW_PER_PAGE = 37;
 
     /**
      * All the field in the table

@@ -17,13 +17,11 @@ public class DataDemo {
     /**
      * create the demo dataset to test create excel file
      */
-    public static void test() {
+    public static void test_1(int numberValue) {
         ManagementStudentController managementController = new ManagementStudentController();
 
         Random random = new Random();
-
         StringBuilder dobTemp = new StringBuilder();
-
         Student student = new Student();
         student.setCode(AutoCodeGeneration.generateCode());
         student.setName("Tran Xuan Quyet");
@@ -41,7 +39,7 @@ public class DataDemo {
          * @param numbRandom create random number from (0-5) that use as index of DEMO_YEAR_DATA array
          * @param dobTemp create form dobTemp to set to student object like form (dd/MM/yyyy)
          */
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < numberValue; i++) {
             int numbRandom = random.nextInt(5); //random number
             Student student1 = new Student();
             student1.setName("Demo Name");

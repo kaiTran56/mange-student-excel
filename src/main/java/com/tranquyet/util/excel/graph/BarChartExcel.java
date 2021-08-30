@@ -2,7 +2,7 @@ package com.tranquyet.util.excel.graph;
 
 import com.tranquyet.constant.excel.GraphExcelValueConstant;
 import com.tranquyet.controller.ExcelController;
-import com.tranquyet.util.excel.ComponentExcel;
+import com.tranquyet.util.excel.table.ComponentExcel;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.*;
 import org.openxmlformats.schemas.drawingml.x2006.chart.*;
@@ -33,10 +33,9 @@ public class BarChartExcel {
         // draw graph
         createGraphCheck(chartSheet, mapSameAge.size());
 
-        createBreakPage(chartSheet);
+        GraphComponent.createBreakPage(chartSheet);
 
     }
-
     /**
      * create a bar chart to describe the count year table previously
      *
@@ -56,18 +55,15 @@ public class BarChartExcel {
         XSSFChart chart = drawing.createChart(anchor);
         chart.setTitleText("Chart Title");
 
-
-        setRoundedCorners(chart, false);
+        GraphComponent.setRoundedCorners(chart, false);
         CTChart ctChart = chart.getCTChart();
         CTPlotArea ctPlotArea = ctChart.getPlotArea();
-
         //the bar chart
         CTBarChart ctBarChart = ctPlotArea.addNewBarChart();
         CTBoolean ctBoolean = ctBarChart.addNewVaryColors();
         ctBoolean.setVal(true);
         ctBarChart.addNewBarDir().setVal(STBarDir.COL);
-
-//the bar series
+        //the bar series
         StringBuilder positionYearCell = new StringBuilder().append(GraphExcelValueConstant.CHART_SHEET_EXCEL).append("!$K$5:$K").append("$"+(4+dynamicPos));
         CTBarSer ctBarSer = ctBarChart.addNewSer();
         CTSerTx ctSerTx = ctBarSer.addNewTx();
@@ -115,7 +111,6 @@ public class BarChartExcel {
 
         //at least the border lines in Libreoffice Calc ;-)
         ctLineSer.addNewSpPr().addNewLn().addNewSolidFill().addNewSrgbClr().setVal(new byte[]{(byte) 255, (byte) 153, 0});
-
         //telling the LineChart that it has axes and giving them Ids
         ctLineChart.addNewAxId().setVal(123458); //cat axis 2 (lines)
         ctLineChart.addNewAxId().setVal(123459); //val axis 2 (right)
@@ -166,38 +161,9 @@ public class BarChartExcel {
         ctValAx.addNewTickLblPos().setVal(STTickLblPos.NEXT_TO);
 
         /**
-         * set title for axis
+         * create legend and label
          */
-        chart.getAxes().get(0).setTitle(GraphExcelValueConstant.YEAR_CHART_TABLE); // bottom axis
-        chart.getAxes().get(3).setTitle(GraphExcelValueConstant.COUNT_YEAR_CHART_TABLE); // right axis
-        chart.getAxes().get(2).setTitle(GraphExcelValueConstant.YEAR_CHART_TABLE); // left axis
-
-        /**
-         * format label for barchart
-         */
-        chart.getCTChart().getPlotArea().getBarChartArray(0).getSerArray(0).addNewDLbls();
-        chart.getCTChart().getPlotArea().getBarChartArray(0).getSerArray(0).getDLbls().addNewShowVal().setVal(true);
-        chart.getCTChart().getPlotArea().getBarChartArray(0).getSerArray(0).getDLbls().addNewShowLegendKey().setVal(false);
-        chart.getCTChart().getPlotArea().getBarChartArray(0).getSerArray(0).getDLbls().addNewShowCatName().setVal(false);
-        chart.getCTChart().getPlotArea().getBarChartArray(0).getSerArray(0).getDLbls().addNewShowSerName().setVal(false);
-
-        /**
-         * format label for line graph
-         */
-        chart.getCTChart().getPlotArea().getLineChartArray(0).getSerArray(0).addNewDLbls();
-        chart.getCTChart().getPlotArea().getLineChartArray(0).getSerArray(0).getDLbls()
-                .addNewSpPr().addNewSolidFill().addNewSrgbClr().setVal(new byte[]{(byte) 255, (byte) 255, (byte) 255});
-        chart.getCTChart().getPlotArea().getLineChartArray(0).getSerArray(0).getDLbls().addNewShowVal().setVal(true);
-        chart.getCTChart().getPlotArea().getLineChartArray(0).getSerArray(0).getDLbls().addNewShowLegendKey().setVal(false);
-        chart.getCTChart().getPlotArea().getLineChartArray(0).getSerArray(0).getDLbls().addNewShowCatName().setVal(false);
-        chart.getCTChart().getPlotArea().getLineChartArray(0).getSerArray(0).getDLbls().addNewShowSerName().setVal(false);
-
-        /**
-         * Set position Legend
-         */
-        CTLegend ctLegend = ctChart.addNewLegend();
-        ctLegend.addNewLegendPos().setVal(STLegendPos.R);
-        ctLegend.addNewOverlay().setVal(false);
+        GraphComponent.createLegendAndLabel(chart, ctChart);
     }
 
     /**
@@ -211,21 +177,20 @@ public class BarChartExcel {
         ComponentExcel componentExcel = ComponentExcel.getInstance();
         Row row = null;
         Cell cell = null;
-
         /**
          * create Year field
          */
         row = chartSheet.createRow(3);
         cell = row.createCell(10);
         cell.setCellValue(GraphExcelValueConstant.YEAR_CHART_TABLE);
-        componentExcel.createDateType(cell, workbook);
+        GraphComponent.createDataType(cell, workbook);
 
         /**
          * create count field
          */
         cell = row.createCell(11);
         cell.setCellValue(GraphExcelValueConstant.COUNT_YEAR_CHART_TABLE);
-        componentExcel.createDateType(cell, workbook);
+        GraphComponent.createDataType(cell, workbook);
 
         chartSheet.setColumnWidth(10, 14 * 256);
         chartSheet.setColumnWidth(11, 15 * 256);
@@ -235,28 +200,12 @@ public class BarChartExcel {
             row = chartSheet.createRow(3 + increase);
             cell = row.createCell(10);
             cell.setCellValue(year);
-            componentExcel.createDateType(cell, workbook);
+            GraphComponent.createDataType(cell, workbook);
             cell = row.createCell(11);
             cell.setCellValue(mapSameAge.get(year));
-            componentExcel.createDateType(cell, workbook);
+            GraphComponent.createDataType(cell, workbook);
             increase++;
         }
-
-
-    }
-
-    private static void setRoundedCorners(XSSFChart chart, boolean setVal) {
-        if (chart.getCTChartSpace().getRoundedCorners() == null) chart.getCTChartSpace().addNewRoundedCorners();
-        chart.getCTChartSpace().getRoundedCorners().setVal(setVal);
-    }
-
-    public static void createBreakPage(Sheet chartSheet) {
-        chartSheet.setRowBreak(16);
-        chartSheet.getPrintSetup().setPaperSize(PrintSetup.A4_PAPERSIZE);
-        chartSheet.setFitToPage(true);
-        PrintSetup printSetup = chartSheet.getPrintSetup();
-        printSetup.setFitHeight((short) 0);
-        printSetup.setFitWidth((short) 1);
     }
 
 }
